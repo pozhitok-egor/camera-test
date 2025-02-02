@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    video {
+      width: 100%;
+      filter: blur(10px);
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .container {
+      display: grid;
+      gap: 10px;
+      max-width: calc(100% - 20px);
+      justify-items: center;
+      margin: 0 auto;
+      grid-template-rows: auto;
+    }
+
+    .video-container {
+      width: 80%;
+      max-width: 300px;
+      margin-top: 20px;
+      border: 2px solid black;
+      overflow: hidden;
+    }
+
+    .video-inside-container {
+      margin: -20px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    #failed-cameras {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>Camera Test</h1>
+    <p>Click "Start Test" to check all available cameras.</p>
+    <div class="buttons">
+      <button onclick="startCameraTest()">Start Test</button>
+      <button onclick="stopCamera()">Stop Camera</button>
+    </div>
+    <div class="video-container">
+      <div class="video-inside-container">
+        <video id="video" autoplay playsinline></video>
+      </div>
+    </div>
+    <p id="status"></p>
+    <div id="failed-cameras"></div>
+  </div>
+
+  <script>
+    let videoElement = document.getElementById('video');
+    let statusElement = document.getElementById('status');
+    let failedCamerasElement = document.getElementById('failed-cameras');
+    let currentStream = null;
+    let cameras = [];
+    let failedCameras = [];
+    let currentCameraIndex = 0;
+
+    async function startCameraTest() {
+      try {
+        failedCameras = [];
+        failedCamerasElement.innerHTML = "";
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        cameras = devices.filter(device => device.kind === 'videoinput');
+
+        cameras.forEach(device => console.log(`${device.label}:\nID: ${device.deviceId},\ngroup ID: ${device.groupId}`));
+
+        if (cameras.length === 0) {
+          statusElement.textContent = "No cameras found!";
+          return;
+        }
+
+        statusElement.textContent = `Found ${cameras.length} camera(s). Testing...`;
+
+        currentCameraIndex = 0;
+        testNextCamera();
+      } catch (error) {
+        console.error("Error accessing media devices:", error);
+        statusElement.textContent = "Error accessing cameras!";
+      }
+    }
+
+    async function testNextCamera() {
+      if (currentCameraIndex >= cameras.length) {
+        statusElement.textContent = "All cameras tested!";
+        showFailedCameras();
+        return;
+      }
+
+      stopCamera();
+
+      let camera = cameras[currentCameraIndex];
+      statusElement.innerHTML = `Testing camera ${currentCameraIndex + 1} / ${cameras.length}: <b>${camera.label || "Unknown camera"}</b>`;
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: camera.deviceId }
+        });
+
+        videoElement.srcObject = stream;
+        currentStream = stream;
+
+        setTimeout(() => {
+          currentCameraIndex++;
+          testNextCamera();
+        }, 5000);
+      } catch (error) {
+        console.error(`Error accessing camera ${currentCameraIndex + 1}:`, error);
+
+        failedCameras.push({
+          label: camera.label || `Camera ${currentCameraIndex + 1}`,
+          error: error.message || "Unknown error"
+        });
+
+        statusElement.textContent = `Failed to access camera ${currentCameraIndex + 1}`;
+        currentCameraIndex++;
+        testNextCamera();
+      }
+    }
+
+    function stopCamera() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        videoElement.srcObject = null;
+      }
+    }
+
+    function showFailedCameras() {
+      if (failedCameras.length === 0) return;
+
+      let failedHTML = "<p>Failed cameras:</p><ul>";
+      failedCameras.forEach(cam => {
+        failedHTML += `<li>${cam.label}: ${cam.error}</li>`;
+      });
+      failedHTML += "</ul>";
+
+      failedCamerasElement.innerHTML = failedHTML;
+    }
+  </script>
+
+</body>
+
+</html>
