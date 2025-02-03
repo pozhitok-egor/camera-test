@@ -14,7 +14,7 @@
 
     video {
       width: 100%;
-      filter: blur(10px);
+      filter: blur(30px);
     }
 
     button {
@@ -36,18 +36,23 @@
     .video-container {
       width: 80%;
       max-width: 300px;
-      margin-top: 20px;
       border: 2px solid black;
       overflow: hidden;
     }
 
     .video-inside-container {
-      margin: -20px;
+      margin: -60px;
     }
 
     .buttons {
       display: flex;
       gap: 10px;
+    }
+
+    #camera-list li {
+      list-style-type: none;
+      font-style: italic;
+      font-weight: 400;
     }
 
     #failed-cameras {
@@ -72,6 +77,7 @@
         <video id="video" autoplay playsinline></video>
       </div>
     </div>
+    <p id="camera-list"></p>
     <p id="status"></p>
     <div id="failed-cameras"></div>
   </div>
@@ -92,6 +98,8 @@
 
         const devices = await navigator.mediaDevices.enumerateDevices();
         cameras = devices.filter(device => device.kind === 'videoinput');
+
+        showCaremaList()
 
         cameras.forEach(device => console.log(`${device.label}:\nID: ${device.deviceId},\ngroup ID: ${device.groupId}`));
 
@@ -114,6 +122,8 @@
       if (currentCameraIndex >= cameras.length) {
         statusElement.textContent = "All cameras tested!";
         showFailedCameras();
+        stopCamera();
+
         return;
       }
 
@@ -165,6 +175,15 @@
       failedHTML += "</ul>";
 
       failedCamerasElement.innerHTML = failedHTML;
+    }
+
+    function showCaremaList() {
+      let cameraList = "<p>List of cameras:</p><ul>";
+      cameras.forEach(cam => {
+        cameraList += `<li>${cam.label}</li>`;
+      });
+      cameraList += "</ul>";
+      document.getElementById('camera-list').innerHTML = cameraList;
     }
   </script>
 
